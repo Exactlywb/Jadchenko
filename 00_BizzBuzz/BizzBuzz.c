@@ -70,9 +70,12 @@ static int HandleBizzBuzz (const int input, const int output) {
                 
                 } else if (CUR_SYMB == '-') {
                 
-                    if (firstMinus)
+                    if (firstMinus) {
+
                         firstMinus = 0;
-                    else
+                        lastWordFlag = BB_MINUS_;
+
+                    } else
                         lastWordFlag = BB_LETTERS_;  
                 
                 } else
@@ -111,7 +114,7 @@ static int CatchBizzBuzzSpace   (const int input, long* offset, char* buffer, in
         int writeChecker = write (output, buffer + *bufferInd, 1);
         FUNCTION_ASSERT (writeChecker < 0, {perror ("Bad write into output file");}, errno);
 
-    } else if (*lastWordFlag == BB_LETTERS_) {
+    } else if (*lastWordFlag == BB_LETTERS_ || *lastWordFlag == BB_MINUS_) {
    
         int printCheck = PrintWord (input, offset, buffer, readenBytes, bufferInd, output);
         FUNCTION_ASSERT (printCheck < 0, {perror ("Bad print word");}, errno);

@@ -27,7 +27,8 @@ typedef enum BB_WORD_TYPES {
 
     BB_SPACE_,
     BB_LETTERS_,
-    BB_NUMBER_
+    BB_NUMBER_,
+    BB_MINUS_
 
 }BB_WORD_TYPES;
 
