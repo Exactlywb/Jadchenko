@@ -40,6 +40,8 @@ static int HandleBizzBuzz (const int input, const int output) {
     int readenBytes = read (input, buffer, BUFFER_SIZE);
     FUNCTION_ASSERT (readenBytes < 0, {perror ("Bad read from input file");}, errno);
     
+    int firstMinus = 1;
+
     int bufferInd = 0;
     while (readenBytes != 0) {
     
@@ -47,9 +49,14 @@ static int HandleBizzBuzz (const int input, const int output) {
 
         for (bufferInd = 0; bufferInd < readenBytes; bufferInd++) {
         
-            if (isspace (CUR_SYMB))
+            if (isspace (CUR_SYMB)) {
+            
                 CatchBizzBuzzSpace (input, &offset, buffer, &readenBytes, &lastWordFlag, 
                                     &mod3, &mod5, &bufferInd, output);
+            
+                firstMinus = 1;
+
+            }
             else {
             
                 if (isdigit (CUR_SYMB) && lastWordFlag != BB_LETTERS_) {
@@ -61,7 +68,14 @@ static int HandleBizzBuzz (const int input, const int output) {
 
                     lastWordFlag = BB_NUMBER_;
                 
-                } else if (CUR_SYMB != '-')
+                } else if (CUR_SYMB == '-') {
+                
+                    if (firstMinus)
+                        firstMinus = 0;
+                    else
+                        lastWordFlag = BB_LETTERS_;  
+                
+                } else
                     lastWordFlag = BB_LETTERS_;
             
                 offset++;
