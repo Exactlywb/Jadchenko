@@ -24,7 +24,7 @@ int RunBizzBuzz (const int argc, char** argv) {
 
 }
 
-#define BUFFER_SIZE 1000
+#define BUFFER_SIZE 1
 #define CUR_SYMB buffer [bufferInd]
 
 static int HandleBizzBuzz (const int input, const int output) {
@@ -61,7 +61,7 @@ static int HandleBizzBuzz (const int input, const int output) {
 
                     lastWordFlag = BB_NUMBER_;
                 
-                } else
+                } else if (CUR_SYMB != '-')
                     lastWordFlag = BB_LETTERS_;
             
                 offset++;
