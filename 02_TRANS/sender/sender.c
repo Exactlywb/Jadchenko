@@ -74,8 +74,9 @@ int RunProducer (const int input, const pid_t receiver) {
 int stoppedSending = 1;
 
 void ControlHandler (int sigN) {
-
-    stoppedSending = 0;
+    
+    if (sigN == SIGUSR1)
+        stoppedSending = 0;
 
 }
 

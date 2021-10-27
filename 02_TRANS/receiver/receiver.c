@@ -71,7 +71,13 @@ int WriteIntoOutputFile (pid_t pid) {
 }
 
 void CharHandler (int sigN, siginfo_t* sigInfo, void* context) {
-   
+    
+    if (sigN != SIGUSR1)
+        return;
+
+    if (context == NULL)
+        return;
+
     pid_t pidToSend = sigInfo->si_pid;
     int curChar = sigInfo->si_value.sival_int;
     if (curChar == 0) { //end of input
@@ -100,7 +106,7 @@ void CharHandler (int sigN, siginfo_t* sigInfo, void* context) {
 
 int RunReceiver () {
 
-    FUNCTION_ASSERT (OutputBuffer < 0, {printf ("Bad const int output in function %s on line %d\n", __func__, __LINE__);}, BAD_OUTPUT_FILE);
+    FUNCTION_ASSERT (OutputFile < 0, {printf ("Bad const int output in function %s on line %d\n", __func__, __LINE__);}, BAD_OUTPUT_FILE);
 
     struct sigaction usr1_sig = {};
     usr1_sig.sa_sigaction = CharHandler;
