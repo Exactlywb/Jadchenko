@@ -80,9 +80,16 @@ void ControlHandler (int sigN) {
 }
 
 int RunByteByByteOutput (const pid_t receiver, const char* buffer, const ssize_t readenBytes) {
+    
+    struct sigaction usr1_sig = {};
+    usr1_sig.sa_handler = ControlHandler;
 
+    sigemptyset (&usr1_sig.sa_mask);
+
+    sigaction(SIGUSR1, &usr1_sig, NULL);
+    
     for (ssize_t i = 0; i < readenBytes; i++) {
-        
+
         stoppedSending = 1;
         
         union sigval sendedChar;
@@ -91,16 +98,7 @@ int RunByteByByteOutput (const pid_t receiver, const char* buffer, const ssize_t
         int sendSigErr = sigqueue (receiver, SIGUSR1, sendedChar);
         FUNCTION_ASSERT (sendSigErr < 0, {perror ("Bad send for a signal");}, errno);
 
-        printf ("sended char: %c = %d\n", sendedChar.sival_int, sendedChar.sival_int);
-
-        struct sigaction usr1_sig = {};
-        usr1_sig.sa_handler = ControlHandler;
-
-        sigemptyset (&usr1_sig.sa_mask);
-
-        sigaction(SIGUSR1, &usr1_sig, NULL);
-
-        while (stoppedSending) {sleep (1);}
+        while (stoppedSending) { sleep (1); }
 
     }
 

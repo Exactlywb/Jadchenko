@@ -58,26 +58,42 @@ int     CurrentOutBuffInd           = 0;
 
 int     ContinueReceive             = 1;
 
-void CharHandler (int sigN, siginfo_t* sigInfo, void* context) {
+int WriteIntoOutputFile (pid_t pid) {
 
-    //printf ("Hi! I got: %c from signal %d\n", sigInfo->si_value.sival_int, sigN);
-    //printf (":(\n");
-    
+    int writeErr = write (OutputFile, OutputBuffer, CurrentOutBuffInd);
+    FUNCTION_ASSERT (writeErr < 0, {perror ("Bad write into output file");
+                                    kill (pid, SIGUSR1);}, errno);     //!TODO check si_pid
+
+    kill (pid, SIGUSR1);
+
+    return 0;
+
+}
+
+void CharHandler (int sigN, siginfo_t* sigInfo, void* context) {
+   
+    pid_t pidToSend = sigInfo->si_pid;
     int curChar = sigInfo->si_value.sival_int;
     if (curChar == 0) { //end of input
-    
-        ContinueReceive = 0;
-        int writeErr = write (OutputFile, OutputBuffer, CurrentOutBuffInd);
-        FUNCTION_ASSERT (writeErr < 0, {perror ("Bad write into output file");
-                                        kill (sigInfo->si_pid, SIGUSR1);}, );        //!TODO check si_pid
         
-        kill (sigInfo->si_pid, SIGUSR1);
+        ContinueReceive = 0;
+        WriteIntoOutputFile (pidToSend);
+
         return;
 
     }
 
     OutputBuffer [CurrentOutBuffInd++] = sigInfo->si_value.sival_int;
-    printf ("current buffer = %s\n", OutputBuffer);
+
+    if (CurrentOutBuffInd == BUFFER_SIZE) {
+    
+        int writeErr = WriteIntoOutputFile (pidToSend);
+        FUNCTION_ASSERT (writeErr != 0, {}, );
+
+        CurrentOutBuffInd = 0;
+    
+    }
+
     kill (sigInfo->si_pid, SIGUSR1);
 
 }
