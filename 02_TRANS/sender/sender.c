@@ -45,8 +45,8 @@ int main (int argc, char** argv) {
 
 }
 
-#define BUFFER_SIZE 100000
-int RunProducer (const int input, const pid_t receiver) {
+#define BUFFER_SIZE 500000
+inline int RunProducer (const int input, const pid_t receiver) {
     
     char buffer [BUFFER_SIZE] = ""; 
     
@@ -61,12 +61,12 @@ int RunProducer (const int input, const pid_t receiver) {
         readenBytes = read (input, buffer, BUFFER_SIZE);
 
     }
-    printf ("Sended 0\n");
+
     buffer [0] = 0;
     readenBytes = 1;
     int outErr = RunByteByByteOutput (receiver, buffer, readenBytes);
     FUNCTION_ASSERT (outErr != NO_ERR, {}, outErr);
-    printf ("Now I have to end it\n");
+
     return NO_ERR;
 
 }
@@ -80,7 +80,25 @@ void ControlHandler (int sigN) {
 
 }
 
-int RunByteByByteOutput (const pid_t receiver, const char* buffer, const ssize_t readenBytes) {
+inline int BuildSendVal (ssize_t* curInd, const char* buffer, const ssize_t readenBytes) {
+
+    static const ssize_t del = sizeof (int) / sizeof (char);
+
+    int res = 0;
+    if ((readenBytes - *curInd) >= del) {
+ 
+        char* resMir = (char*)(&res);
+        for (size_t i = 0; i < del; i++)          
+            resMir [i] = buffer [(*curInd)++];
+    
+    } else 
+        res = buffer [(*curInd)++];
+
+    return res;
+
+}
+
+inline int RunByteByByteOutput (const pid_t receiver, const char* buffer, const ssize_t readenBytes) {
     
     struct sigaction usr1_sig = {};
     usr1_sig.sa_handler = ControlHandler;
@@ -89,13 +107,13 @@ int RunByteByByteOutput (const pid_t receiver, const char* buffer, const ssize_t
 
     sigaction(SIGUSR1, &usr1_sig, NULL);
     
-    for (ssize_t i = 0; i < readenBytes; i++) {
+    for (ssize_t i = 0; i < readenBytes;) {
 
         stoppedSending = 1;
         
         union sigval sendedChar;
-        sendedChar.sival_int = buffer [i];
-
+        sendedChar.sival_int = BuildSendVal (&i, buffer, readenBytes);
+     
         int sendSigErr = sigqueue (receiver, SIGUSR1, sendedChar);
         FUNCTION_ASSERT (sendSigErr < 0, {perror ("Bad send for a signal");}, errno);
 
@@ -126,3 +144,4 @@ int CheckInput (const int argc, char** argv) {
     return 0;
 
 }
+

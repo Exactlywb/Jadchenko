@@ -52,13 +52,13 @@ int main (int argc, char** argv) {
 
 }
 
-#define BUFFER_SIZE 100000
+#define BUFFER_SIZE 500000
 char    OutputBuffer [BUFFER_SIZE]  = "";
 int     CurrentOutBuffInd           = 0;
 
 int     ContinueReceive             = 1;
 
-int WriteIntoOutputFile (pid_t pid) {
+inline int WriteIntoOutputFile (pid_t pid) {
 
     int writeErr = write (OutputFile, OutputBuffer, CurrentOutBuffInd);
     FUNCTION_ASSERT (writeErr < 0, {perror ("Bad write into output file");
@@ -89,22 +89,31 @@ void CharHandler (int sigN, siginfo_t* sigInfo, void* context) {
 
     }
 
-    OutputBuffer [CurrentOutBuffInd++] = sigInfo->si_value.sival_int;
+    static const ssize_t del = sizeof (int) / sizeof (char);
+    char* fullPres = (char*)(&curChar);
+    for (ssize_t i = 0; i < del; i++) {
+        
+        char nextChar = fullPres [i];
+        if (nextChar == 0)
+            break;
 
-    if (CurrentOutBuffInd == BUFFER_SIZE) {
+        OutputBuffer [CurrentOutBuffInd++] = nextChar;
+        if (CurrentOutBuffInd == BUFFER_SIZE) {
     
-        int writeErr = WriteIntoOutputFile (pidToSend);
-        FUNCTION_ASSERT (writeErr != 0, {}, );
+            int writeErr = WriteIntoOutputFile (pidToSend);
+            FUNCTION_ASSERT (writeErr != 0, {}, );
 
-        CurrentOutBuffInd = 0;
+            CurrentOutBuffInd = 0;
     
-    }
+        }
+
+    } 
 
     kill (sigInfo->si_pid, SIGUSR1);
 
 }
 
-int RunReceiver () {
+inline int RunReceiver () {
 
     FUNCTION_ASSERT (OutputFile < 0, {printf ("Bad const int output in function %s on line %d\n", __func__, __LINE__);}, BAD_OUTPUT_FILE);
 
@@ -153,3 +162,4 @@ int CheckInput (const int argc, char** argv) {
     return NO_INPUT_ERR;
 
 }
+

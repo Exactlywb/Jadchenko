@@ -1,6 +1,7 @@
 #ifndef FROLOV_DEFINE__
 #define FROLOV_DEFINE__
 
+#ifdef NDEBUG
 #define FUNCTION_ASSERT(condition, toDo, err)   do {                            \
                                                                                 \
                                                     if (condition) {            \
@@ -11,6 +12,9 @@
                                                     }                           \
                                                                                 \
                                                 } while (0)
+#else
+#define FUNCTION_ASSERT(condition, toDo, err)
+#endif
 
 #define IS_NULL(ptr) (!ptr)
 
