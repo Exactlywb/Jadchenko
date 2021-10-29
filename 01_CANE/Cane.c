@@ -32,6 +32,8 @@ int RunConveyer (char** argv, const int input) {
     int readErr = read (input, buffer, fileSize);
     FUNCTION_PROTECT (readErr < 0, {perror ("bad file read");}, errno);
     buffer [fileSize] = 0;
+
+//    close (input);
     
     size_t commandsNum = GetCommandsNum (buffer);
 
@@ -45,10 +47,7 @@ int RunConveyer (char** argv, const int input) {
                                                     PRINT_CONVEYER_ERR (sepErr);}, sepErr);
     
     int execErr = ExecCommands (commandsArr, commandsNum);
-    FUNCTION_PROTECT (execErr != NO_CONVEYER_ERR, { CommandsDstr (commandsArr, commandsNum);
-                                                    free (buffer);
-                                                    PRINT_CONVEYER_ERR (execErr);}, execErr);
-    
+
     free (buffer);
     
     CommandsDstr (commandsArr, commandsNum);
@@ -182,7 +181,8 @@ static int ExecCommands (const Command* commands, size_t commandsNum) {
     for (int i = 0; i < commandsNum - 1; i++) {
     
         int checkPipe = pipe (fd + 2 * i);
-        FUNCTION_PROTECT (checkPipe < 0, {PRINT_CONVEYER_ERR (BAD_PIPE);}, BAD_PIPE);
+        FUNCTION_PROTECT (checkPipe < 0, {  free (fd);
+                                            PRINT_CONVEYER_ERR (BAD_PIPE);}, BAD_PIPE);
     
     }
 
@@ -192,26 +192,33 @@ static int ExecCommands (const Command* commands, size_t commandsNum) {
     
         SET_ERRNO;
         curPid = fork ();
-        FUNCTION_PROTECT (curPid < 0, {PRINT_CONVEYER_ERR (BAD_FORK_CALL);}, BAD_FORK_CALL);
+        FUNCTION_PROTECT (curPid < 0, { free (fd);
+                                        PRINT_CONVEYER_ERR (BAD_FORK_CALL);}, BAD_FORK_CALL);
 
         if (curPid == 0) { //child
         
-            if (i != 0)
-                FUNCTION_PROTECT (dup2 (fd [2 * i - 2], STDIN_FILENO) < 0, {perror ("Bad input dup2");}, errno);
-            if (i != commandsNum - 1)
-                FUNCTION_PROTECT (dup2 (fd [2 * i + 1], STDOUT_FILENO) < 0, {perror ("Bad output dup2");}, errno);
+            if (i != 0) {
+                FUNCTION_PROTECT (dup2 (fd [2 * i - 2], STDIN_FILENO) < 0, {free (fd);
+                                                                            perror ("Bad input dup2");}, errno);
+            }
+            if (i != commandsNum - 1) {
+                FUNCTION_PROTECT (dup2 (fd [2 * i + 1], STDOUT_FILENO) < 0, {   free (fd);
+                                                                                perror ("Bad output dup2");}, errno);
+            }
             
             for (size_t curCloseInd = 0; curCloseInd < 2 * (commandsNum - 1); curCloseInd++) {
             
                 SET_ERRNO;
                 int checkClose = close (fd [curCloseInd]);
-                FUNCTION_PROTECT (checkClose < 0, {perror ("Bad pipe's close");}, errno);
+                FUNCTION_PROTECT (checkClose < 0, { free (fd);
+                                                    perror ("Bad pipe's close");}, errno);
             
             }
             
             SET_ERRNO;
             int execErr = execvp (commands [i].argv [0], commands [i].argv);
-            FUNCTION_PROTECT (execErr < 0, {perror ("bad execvp");}, errno);           
+            FUNCTION_PROTECT (execErr < 0, {free (fd);
+                                            printf ("Command %s bad exec :(\n", commands [i].argv [0]);}, errno);           
 
         }
     
@@ -220,7 +227,8 @@ static int ExecCommands (const Command* commands, size_t commandsNum) {
     int w8Status = 0;
     SET_ERRNO;
     pid_t checkW8 = wait (&w8Status);
-    FUNCTION_PROTECT (checkW8 < 0, {perror ("bad wait status");}, errno);
+    FUNCTION_PROTECT (checkW8 < 0, {free (fd);
+                                    perror ("bad wait status");}, errno);
 
     free (fd);
     

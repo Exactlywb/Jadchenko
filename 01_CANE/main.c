@@ -21,7 +21,7 @@ int main (int argc, char** argv) {
     int inputErrs = CheckInput (argc, argv);
     FUNCTION_PROTECT (inputErrs != NO_INPUT_ERR, {PRINT_INPUT_ERR (inputErrs);}, inputErrs);
 
-    int input = open (argv [1], O_RDONLY);
+    int input = open (argv [1], O_RDONLY | O_CLOEXEC);
     FUNCTION_PROTECT (input < 0, {  close (input); 
                                     perror ("can't open input file");}, errno);
 
