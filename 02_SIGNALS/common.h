@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <signal.h>
+#include <time.h>
 
 #define FUNCTION_SECURITY(condition, toDo, err)                             \
                                                 do {                        \
@@ -27,5 +28,7 @@
                                                 } while (0)
 
 #define IS_NULL(ptr) (!ptr)
+
+#define BUFFER_SIZE 100000
 
 #endif

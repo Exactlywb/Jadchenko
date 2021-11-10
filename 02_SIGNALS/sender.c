@@ -2,22 +2,25 @@
 
 int StoppedSending;
 
-int     CheckInput          (const int argc, char** argv);
+inline  int     CheckInput          (const int argc, char** argv);
 
-int     RunSender           (const int input, const pid_t receiver, const off_t size);
-int     RunSenderConveyer   (const pid_t receiver, const unsigned char* buffer, const ssize_t readenBytes);
-int     SendFileSize        (const pid_t receiver, const off_t size);
+        int     RunSender           (const int input, const pid_t receiver, const off_t size);
+inline  int     RunSenderConveyer   (const pid_t receiver, const unsigned char* buffer, const ssize_t readenBytes);
+inline  int     SendFileSize        (const pid_t receiver, const off_t size);
 
-void    ControlHandler      (int sigN);
+        void    ControlHandler      (int sigN);
 
-off_t   GetFileSize         (const int file);
+        off_t   GetFileSize         (const int file);
 
 int main (int argc, char** argv) {
 
     FUNCTION_SECURITY (CheckInput (argc, argv), {}, 0);
 
+    clock_t begin = clock ();
+
     int input = open (argv [1], O_RDONLY);
     FUNCTION_SECURITY (input < 0, {perror ("Bad input file");}, errno);
+    
     off_t size = GetFileSize (input);
     // printf ("size of file = %ld\n", size);
 
@@ -31,11 +34,14 @@ int main (int argc, char** argv) {
     int closeErr = close (input);
     FUNCTION_SECURITY (closeErr, {perror ("Bad close for input file");}, errno);
 
+    clock_t end = clock ();
+    double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+    printf ("Speed: %f MB / s\n", (size / time_spent) / 1e6);
+
     return senderErr;
 
 }
 
-#define BUFFER_SIZE 100000
 int RunSender (const int input, const pid_t receiver, const off_t size) {
 
     StoppedSending = 1;
@@ -45,7 +51,7 @@ int RunSender (const int input, const pid_t receiver, const off_t size) {
 
     sigemptyset (&usr1_sig.sa_mask);
 
-    sigaction(SIGUSR1, &usr1_sig, NULL);
+    sigaction (SIGUSR1, &usr1_sig, NULL);
 
     int sendSizeErr = SendFileSize (receiver, size);
     FUNCTION_SECURITY (sendSizeErr, {}, sendSizeErr);
@@ -75,7 +81,7 @@ void ControlHandler (int sigN) {
 
 }
 
-static void BuildSend (union sigval* sendedChar, const unsigned char* buffer, const ssize_t readenBytes, ssize_t* i) {
+inline void BuildSend (union sigval* sendedChar, const unsigned char* buffer, const ssize_t readenBytes, ssize_t* i) {
 
     static const ssize_t del = sizeof (void*) / sizeof (char);
     // printf ("del = %zu\n", del);
@@ -96,7 +102,7 @@ static void BuildSend (union sigval* sendedChar, const unsigned char* buffer, co
 
 }
 
-int RunSenderConveyer (const pid_t receiver, const unsigned char* buffer, const ssize_t readenBytes) {
+inline int RunSenderConveyer (const pid_t receiver, const unsigned char* buffer, const ssize_t readenBytes) {
     
     for (ssize_t i = 0; i < readenBytes;) {
 
@@ -117,7 +123,7 @@ int RunSenderConveyer (const pid_t receiver, const unsigned char* buffer, const 
 
 }
 
-int SendFileSize (const pid_t receiver, const off_t size) {
+inline int SendFileSize (const pid_t receiver, const off_t size) {
 
     union sigval toSend;
     toSend.sival_int = (int)size;

@@ -4,12 +4,10 @@ int Output = 0;
 int ContinueReceive = 1;
 int SizeOfFile = 0;
 
-#define BUFFER_SIZE 100000
 char OutputBuffer [BUFFER_SIZE] = "";
 int CurSymbInd = 0;
 
 int CheckInput  (const int argc, char** argv);
-
 int RunReceiver ();
 
 int main (int argc, char** argv) {
@@ -38,7 +36,6 @@ void SizeHandler (int sigN, siginfo_t* sigInfo, void* context) {
     if (sigN == SIGUSR2)
         SizeOfFile = sigInfo->si_value.sival_int;
 
-    // printf ("Size of file = %d\n", SizeOfFile);
     kill (sigInfo->si_pid, SIGUSR1);
 
 }
@@ -55,17 +52,29 @@ void CharHandler (int sigN, siginfo_t* sigInfo, void* context) {
 
     pid_t pidToSend = sigInfo->si_pid;
 
-    // printf ("received void = %p\n", sigInfo->si_value.sival_ptr);
-
     size_t receiverVoid = (size_t)sigInfo->si_value.sival_ptr;
-    int highestBorder = SizeOfFile - CurSymbInd < del ? SizeOfFile - CurSymbInd : del;
+    // printf ("receiverVoid = %p\n", sigInfo->si_value.sival_ptr);
+    int highestBorder = SizeOfFile < del ? SizeOfFile : del;
+
     for (int i = 0; i < highestBorder; i++) {
 
         OutputBuffer [CurSymbInd++] = (char)((receiverVoid >> i * 8) & 0xFF);
-        
+        SizeOfFile--;
+
+        if (CurSymbInd == BUFFER_SIZE) {
+
+            int writeErr = write (Output, OutputBuffer, BUFFER_SIZE);
+            FUNCTION_SECURITY (writeErr < 0, {perror ("Bad write into output file");}, );
+
+            CurSymbInd = 0;
+
+            break;
+
+        }
+
     }
 
-    if (CurSymbInd >= SizeOfFile)
+    if (SizeOfFile == 0)
         ContinueReceive = 0;
 
     kill (pidToSend, SIGUSR1);
@@ -83,6 +92,8 @@ int RunReceiver () {
     sigaction(SIGUSR2, &usr2Sig, NULL);
 
     while (SizeOfFile == 0) {sleep (1);}
+
+    // printf ("Size of file = %d\n", SizeOfFile);
 
     //*BUFFER'S CHAR RECEIVE
     struct sigaction usr1Sig = {0};
