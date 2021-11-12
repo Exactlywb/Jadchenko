@@ -7,6 +7,8 @@ int SizeOfFile = 0;
 char OutputBuffer [BUFFER_SIZE] = "";
 int CurSymbInd = 0;
 
+pid_t FirstSender = 0;
+
 int CheckInput  (const int argc, char** argv);
 int RunReceiver ();
 
@@ -33,10 +35,25 @@ void SizeHandler (int sigN, siginfo_t* sigInfo, void* context) {
     if (IS_NULL (context))
         return;
 
-    if (sigN == SIGUSR2)
+    if (sigN == SIGUSR2) {
+
+        if (FirstSender == 0)
+            FirstSender = sigInfo->si_pid;
+        else {
+
+            printf ("Second sender. Try to kill...\n");
+            int tryMurder = kill (sigInfo->si_pid, SIGKILL);
+            FUNCTION_SECURITY (tryMurder < 0, {perror ("Can't kill second sender");}, );
+            FUNCTION_SECURITY (tryMurder >= 0, {printf ("Second sender is killed succesfully!\n");}, );
+            
+        }
+
         SizeOfFile = sigInfo->si_value.sival_int;
 
-    kill (sigInfo->si_pid, SIGUSR1);
+    }
+
+    int sendSigTry = kill (sigInfo->si_pid, SIGUSR1);
+    FUNCTION_SECURITY (sendSigTry < 0, {perror ("Bad signal send to sender");}, );
 
 }
 
