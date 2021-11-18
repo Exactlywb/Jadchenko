@@ -5,27 +5,26 @@
 
 typedef struct stack_t {
 
-    key_t stackKey;
-    
-    int capacity;
-    int size;
+    int     capacity;
+    int     size;
 
-    size_t* data;
+    void**  data;
 
-    int used;
-    int toBeDestructed;
+    key_t   sync_key;
 
 } stack_t;
 
-stack_t*    attach_stack    (key_t      key,        int         size);
+stack_t*    attach_stack    (key_t      key,        int     size);
 int         detach_stack    (stack_t*   stack);
-//int         mark_destruct   (stack_t*   stack);
+int         mark_destruct   (stack_t*   stack);
 
-//int         get_size        (stack_t*   stack);
-//int         get_count       (stack_t*   stack);
+int         get_size        (stack_t*   stack);
+int         get_count       (stack_t*   stack);
 
-//int         push            (stack_t*   stack,      size_t      val);
-//int         pop             (stack_t*   stack,      size_t*     val);
+int         push            (stack_t*   stack,      void*   val);
+int         pop             (stack_t*   stack,      void**  val);
+
+int         stack_dump      (stack_t* stack);
 
 //!TODO
 //int         set_wait        (int        val,        timespec* timeout);

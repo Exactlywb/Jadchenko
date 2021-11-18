@@ -7,10 +7,12 @@
 #include <string.h>
 #include <errno.h>
 
+#include <sys/shm.h>
 #include <sys/ipc.h>
 #include <sys/sem.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #define IS_NULL(ptr) (!ptr)
 #define NULLIFY_ERRNO errno = 0
