@@ -1,0 +1,3 @@
+/home/exactlywb/Desktop/Jadchenko/03_STACK/build/CMakeFiles/rebuild_cache.dir
+/home/exactlywb/Desktop/Jadchenko/03_STACK/build/CMakeFiles/edit_cache.dir
+/home/exactlywb/Desktop/Jadchenko/03_STACK/build/CMakeFiles/stack.dir

@@ -1,0 +1,38 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+../include/common.h
+stdio.h
+-
+stdlib.h
+-
+string.h
+-
+errno.h
+-
+sys/ipc.h
+-
+sys/sem.h
+-
+sys/types.h
+-
+unistd.h
+-
+
+../include/stack.h
+common.h
+../include/common.h
+
+/home/exactlywb/Desktop/Jadchenko/03_STACK/main.c
+stack.h
+/home/exactlywb/Desktop/Jadchenko/03_STACK/stack.h
+
+/home/exactlywb/Desktop/Jadchenko/03_STACK/source/stack.c
+stack.h
+/home/exactlywb/Desktop/Jadchenko/03_STACK/source/stack.h
+

@@ -94,7 +94,8 @@ void CharHandler (int sigN, siginfo_t* sigInfo, void* context) {
     if (SizeOfFile == 0)
         ContinueReceive = 0;
 
-    kill (pidToSend, SIGUSR1);
+    int isSenderAlive = kill (pidToSend, SIGUSR1);
+    FUNCTION_SECURITY (isSenderAlive < 0, {perror ("Bad send control bit into sender"); exit (errno);}, );
 
 }
 
@@ -118,7 +119,14 @@ int RunReceiver () {
 
     sigaction(SIGUSR1, &usr1Sig, NULL);
 
-    while (ContinueReceive) {sleep (1);}
+    while (ContinueReceive) {
+    
+        int senderStillAlive = kill (FirstSender, 0); 
+        FUNCTION_SECURITY (senderStillAlive < 0, {perror ("Sender is dead? So me too..."); exit (errno);}, errno);
+
+        sleep (1);
+
+    }
 
     int writeErr = write (Output, OutputBuffer, CurSymbInd);
     FUNCTION_SECURITY (writeErr < 0, {perror ("Bad write into output file");}, errno);

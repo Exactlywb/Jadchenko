@@ -115,7 +115,13 @@ inline int RunSenderConveyer (const pid_t receiver, const unsigned char* buffer,
         int sendSigErr = sigqueue (receiver, SIGUSR1, sendedChar);
         FUNCTION_SECURITY (sendSigErr < 0, {perror ("Bad send for a signal");}, errno);
 
-        while (StoppedSending) { sleep (1); }
+        while (StoppedSending) { 
+        
+            int receiverStillAlive = kill (receiver, 0);
+            FUNCTION_SECURITY (receiverStillAlive < 0, {perror ("Receiver is dead. Me too..."); exit (errno);}, errno);
+            sleep (1); 
+       
+        }
 
     }
 
