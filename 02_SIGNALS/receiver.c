@@ -110,8 +110,6 @@ int RunReceiver () {
 
     while (SizeOfFile == 0) {sleep (1);}
 
-    // printf ("Size of file = %d\n", SizeOfFile);
-
     //*BUFFER'S CHAR RECEIVE
     struct sigaction usr1Sig = {0};
     usr1Sig.sa_sigaction = CharHandler;
