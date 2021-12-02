@@ -12,12 +12,12 @@ static  int     delete_sem_set  (const key_t key);
 
 static  int     free_shared_mem (const key_t key, const int size);
 
-stack_t* attach_stack (key_t key, int size) {
+Stack_t* attach_stack (key_t key, int size) {
 
     FUNCTION_SECURITY (key == -1, {}, NULL);
     FUNCTION_SECURITY (size <= 0, {}, NULL);
 
-    stack_t* stack = calloc (1, sizeof (*stack));
+    Stack_t* stack = calloc (1, sizeof (*stack));
     FUNCTION_SECURITY  (IS_NULL (stack), 
                         {printf ("Bad memory allocate in function %s\n", __func__);}, 
                         NULL);
@@ -83,6 +83,7 @@ static int get_sem_set (const key_t key) {
         //semaphores don't exist yet
         union semun arg;
         struct sembuf sop = {0};
+        sop.sem_flg = SEM_UNDO;
 
         arg.val = 0;
         FUNCTION_SECURITY (semctl (semId, 0, SETVAL, arg) == -1, {
@@ -147,7 +148,7 @@ static int delete_sem_set (const key_t key) {
     return 0;
 }
 
-int mark_destruct (stack_t* stack) {
+int mark_destruct (Stack_t* stack) {
 
     FUNCTION_SECURITY (IS_NULL (stack),                                             {}, -1);
     FUNCTION_SECURITY (free_shared_mem (stack->stackKey, get_size (stack)) == -1,   {}, -1);
@@ -165,7 +166,7 @@ static int free_shared_mem (const key_t key, const int size) {
 
 }
 
-int get_size (stack_t* stack) {
+int get_size (Stack_t* stack) {
 
     FUNCTION_SECURITY (IS_NULL (stack), {}, -1);
 
@@ -173,7 +174,7 @@ int get_size (stack_t* stack) {
     
 }
 
-int get_count (stack_t* stack) {
+int get_count (Stack_t* stack) {
 
     FUNCTION_SECURITY (IS_NULL (stack), {}, -1);
     
@@ -181,7 +182,7 @@ int get_count (stack_t* stack) {
 
 }
 
-int push (stack_t* stack, size_t value) {
+int push (Stack_t* stack, size_t value) {
 
     FUNCTION_SECURITY (IS_NULL (stack), {}, -1);
     errno = 0;
@@ -189,7 +190,7 @@ int push (stack_t* stack, size_t value) {
     struct sembuf sops = {};
     sops.sem_num    = 1;
     sops.sem_op     = -1;
-    sops.sem_flg    = 0;
+    sops.sem_flg    = SEM_UNDO;
 
     FUNCTION_SECURITY (semop (stack->semId, &sops, 1) == -1, {perror ("bad semop ()");}, -1);
 
@@ -215,14 +216,14 @@ int push (stack_t* stack, size_t value) {
 
 }
 
-int pop (stack_t* stack, size_t* value) {
+int pop (Stack_t* stack, size_t* value) {
 
     FUNCTION_SECURITY (IS_NULL (stack) || IS_NULL (value), {}, -1);
     
     struct sembuf sops = {};
     sops.sem_num    = 1;
     sops.sem_op     = -1;
-    sops.sem_flg    = 0;
+    sops.sem_flg    = SEM_UNDO;
     FUNCTION_SECURITY (semop (stack->semId, &sops, 1) == -1, {perror ("bad semop ()");}, -1);
 
     int curSize = get_count (stack);
@@ -245,7 +246,7 @@ int pop (stack_t* stack, size_t* value) {
 
 } 
 
-int detach_stack (stack_t* stack) {
+int detach_stack (Stack_t* stack) {
 
     FUNCTION_SECURITY (IS_NULL (stack), {}, -1);
 
@@ -262,7 +263,7 @@ int detach_stack (stack_t* stack) {
 
 }
 
-void stack_dump (stack_t* stack) {
+void stack_dump (Stack_t* stack) {
 
     printf ("\n\n\n");
 

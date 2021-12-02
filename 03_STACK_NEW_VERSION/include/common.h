@@ -11,6 +11,8 @@
 #include <sys/types.h>
 #include <sys/sem.h>
 
+#include <signal.h>
+
 #include <unistd.h>
 #include <fcntl.h>
 

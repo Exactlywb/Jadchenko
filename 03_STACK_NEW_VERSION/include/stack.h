@@ -13,7 +13,7 @@ union semun {
 
 };
 
-typedef struct stack_t {
+typedef struct Stack_t {
 
     size_t*     data;
 
@@ -22,20 +22,20 @@ typedef struct stack_t {
 
     key_t       stackKey;
 
-} stack_t;
+} Stack_t;
 
-stack_t*    attach_stack    (key_t key,       int       size);
+Stack_t*    attach_stack    (key_t key,       int       size);
 
-int         mark_destruct   (stack_t* stack);
-int         detach_stack    (stack_t* stack);
+int         mark_destruct   (Stack_t* stack);
+int         detach_stack    (Stack_t* stack);
 
-int         get_size        (stack_t* stack);
-int         get_count       (stack_t* stack);
+int         get_size        (Stack_t* stack);
+int         get_count       (Stack_t* stack);
 
-int         push            (stack_t* stack, size_t     value);
-int         pop             (stack_t* stack, size_t*    value);
+int         push            (Stack_t* stack, size_t     value);
+int         pop             (Stack_t* stack, size_t*    value);
 
-void        stack_dump      (stack_t* stack);
+void        stack_dump      (Stack_t* stack);
 
 #endif
 

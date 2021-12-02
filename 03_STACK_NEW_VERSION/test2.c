@@ -1,7 +1,7 @@
 #include "stack.h"
 
 int main (void) {
-
+    
     Stack_t* mainSt = attach_stack (10, 200);
 
     int childs [100] = {0};
@@ -12,8 +12,6 @@ int main (void) {
             
             Stack_t* new = attach_stack (10, 20);
             push (new, i);
-            size_t trash = 0;
-            pop (new, &trash);
             detach_stack (new);
             return 0;
 
@@ -22,6 +20,9 @@ int main (void) {
         childs [i] = forkRes;
 
     }
+
+    for (int i = 0; i < 100; ++i)
+        kill (childs [i], SIGKILL);
 
     sleep (7);
 
@@ -33,4 +34,3 @@ int main (void) {
     return 0;
 
 }
-
