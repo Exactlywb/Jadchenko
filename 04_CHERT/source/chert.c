@@ -52,6 +52,16 @@ void RunInterface (const char* src, const char* dst, const sigset_t signalsSet) 
             case SIGQUIT:
                 syslog (LOG_INFO, "User decided to kill Timur :(");
                 return;
+            case SIGUSR1:
+                //!TODO
+                break;
+            case SIGUSR2:
+                //!TODO
+                break;
+            case SIGINT:
+                AlarmPer = siginfo.si_value.sival_int;
+                syslog (LOG_INFO, "New copy timout %d seconds\n", AlarmPer);
+                break;
             default:
                 syslog (LOG_ERR, "Unexpected signal %d\n", signal);
 
@@ -67,8 +77,11 @@ int SetSignalsSettings (sigset_t* signalsSet) {
     
     sigemptyset (signalsSet);
 
-    sigaddset (signalsSet, SIGALRM);
-    sigaddset (signalsSet, SIGQUIT);
+    sigaddset (signalsSet, SIGALRM);        //to set copy timeout
+    sigaddset (signalsSet, SIGQUIT);        //general exit for user
+    sigaddset (signalsSet, SIGINT);         //change copy timeout
+    sigaddset (signalsSet, SIGUSR1);        //change src
+    sigaddset (signalsSet, SIGUSR2);        //change dst
 
     FUNCTION_SECURITY (sigprocmask (SIG_BLOCK, signalsSet, NULL), {syslog (LOG_ERR, "bad sigprocmask () in function %s\n", __func__);}, -1);
 
