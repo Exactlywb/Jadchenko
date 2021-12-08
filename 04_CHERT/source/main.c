@@ -6,7 +6,8 @@ typedef enum InputErrs {
     NO_INPUT_PATH,
     NO_OUTPUT_PATH,
     TOO_MUCH_ARGS,
-    NULL_ARGV           //How can it be? It doesn't matter
+    NULL_ARGV,          //How can it be? It doesn't matter
+    EQ_DST_SRC
 
 } InputErrs;
 
@@ -15,7 +16,6 @@ extern  char* DaemonName;
 int     CheckInput      (const int argc, char** argv);
 void    PrintInputErr   (const int err);
 
-//!TODO check that src != dest
 //!TODO add checking for existing daemon
 
 int main (int argc, char** argv) {
@@ -45,10 +45,11 @@ int main (int argc, char** argv) {
 
 int CheckInput (const int argc, char** argv) {
 
-    FUNCTION_SECURITY (IS_NULL (argv), {}, NULL_ARGV);
-    FUNCTION_SECURITY (argc == 1     , {}, NO_INPUT_PATH);
-    FUNCTION_SECURITY (argc == 2     , {}, NO_OUTPUT_PATH);
-    FUNCTION_SECURITY (argc >  3     , {}, TOO_MUCH_ARGS);
+    FUNCTION_SECURITY (IS_NULL (argv)                                   , {}, NULL_ARGV);
+    FUNCTION_SECURITY (argc == 1                                        , {}, NO_INPUT_PATH);
+    FUNCTION_SECURITY (argc == 2                                        , {}, NO_OUTPUT_PATH);
+    FUNCTION_SECURITY (argc >  3                                        , {}, TOO_MUCH_ARGS);
+    FUNCTION_SECURITY (STR_EQ (argv [0], argv [1], strlen (argv [0]))   , {}, EQ_DST_SRC);
 
     return INPUT_OK;
 
@@ -69,6 +70,9 @@ void PrintInputErr (const int err) {
             return;
         case TOO_MUCH_ARGS:
             PRINT_ERR ("too much input arguments");
+            return;
+        case EQ_DST_SRC:
+            PRINT_ERR ("source and destination folders can't be equal");
             return;
         default:
             PRINT_ERR ("unexpected error");
