@@ -63,7 +63,14 @@ void RunInterface (const char* src, const char* dst, const sigset_t signalsSet) 
 
 int SetSignalsSettings (sigset_t* signalsSet) {
 
-    //!TODO
+    FUNCTION_SECURITY (IS_NULL (signalsSet), {printf ("NULL sigset_t& signalsSet in function %s\n", __func__);}, -1);
+    
+    sigemptyset (signalsSet);
+
+    sigaddset (signalsSet, SIGALRM);
+    sigaddset (signalsSet, SIGQUIT);
+
+    FUNCTION_SECURITY (sigprocmask (SIG_BLOCK, signalsSet, NULL), {syslog (LOG_ERR, "bad sigprocmask () in function %s\n", __func__);}, -1);
 
     return 0;
 
