@@ -2,9 +2,19 @@
 
 const char* DaemonName = "Timur";
 unsigned int AlarmPer = 10;         //SIGALRM every 10 seconds
+const char* NewPathFileName = "/home/exactlywb/Desktop/Jadchenko/04_CHERT/newPath";
+
+#define BUF_SIZE 1000
+
+static      void        ChangePath  (char** path);
 
 int RunTimur () {
 
+    printf ("%s\n", NewPathFileName);
+    int pathFile = open (NewPathFileName, O_CREAT, 0666);
+    FUNCTION_SECURITY (pathFile < 0, {perror ("Bad open ()");}, -1);
+    close (pathFile);
+    
     pid_t checkFork = fork ();
 
     FUNCTION_SECURITY (checkFork < 0, {perror ("bad fork ()");}, -1);               //fork err handling
@@ -27,10 +37,10 @@ int RunTimur () {
 
 }
 
-void RunInterface (const char* src, const char* dst, const sigset_t signalsSet) { //!TODO update interface.
+void RunInterface (char* src, char* dst, const sigset_t signalsSet) { //!TODO update interface.
 
-    FUNCTION_SECURITY (IS_NULL (src), {printf ("NULL const char* src in function %s\n", __func__);}, );
-    FUNCTION_SECURITY (IS_NULL (dst), {printf ("NULL const char* dst in function %s\n", __func__);}, );
+    FUNCTION_SECURITY (IS_NULL (src), {syslog (LOG_ERR, "NULL const char* src in function %s\n", __func__);}, );
+    FUNCTION_SECURITY (IS_NULL (dst), {syslog (LOG_ERR, "NULL const char* dst in function %s\n", __func__);}, );
 
     syslog (LOG_INFO, "Running Timur's interface...");
 
@@ -52,11 +62,13 @@ void RunInterface (const char* src, const char* dst, const sigset_t signalsSet) 
             case SIGQUIT:
                 syslog (LOG_INFO, "User decided to kill Timur :(");
                 return;
-            case SIGUSR1:
-                //!TODO
+            case SIGUSR1:   //change src
+                ChangePath (&src);
+                syslog (LOG_INFO, "New src %s\n", src);
                 break;
-            case SIGUSR2:
-                //!TODO
+            case SIGUSR2:   //change dst
+                ChangePath (&dst);
+                syslog (LOG_INFO, "New dst %s\n", dst);
                 break;
             case SIGINT:
                 AlarmPer = siginfo.si_value.sival_int;
@@ -86,5 +98,35 @@ int SetSignalsSettings (sigset_t* signalsSet) {
     FUNCTION_SECURITY (sigprocmask (SIG_BLOCK, signalsSet, NULL), {syslog (LOG_ERR, "bad sigprocmask () in function %s\n", __func__);}, -1);
 
     return 0;
+
+}
+
+static void ChangePath (char** path) {
+
+    static int checkFree = 0;
+
+    FUNCTION_SECURITY (IS_NULL (path), {syslog (LOG_ERR, "NULL char** path in function %s\n", __func__);}, );
+
+    int pathFile = open (NewPathFileName, O_RDONLY, 0666);
+    FUNCTION_SECURITY (pathFile < 0, {syslog (LOG_ERR, "bad open () in function %s\n", __func__);}, );
+
+    char buff [BUF_SIZE] = {0};
+    int checkRead = read (pathFile, buff, BUF_SIZE);
+    syslog (LOG_INFO, "Readen from file %s\n", buff);
+
+    size_t bufSize = strlen (buff);
+    char* newPath = (char*)calloc (bufSize + 1, sizeof (char));
+    FUNCTION_SECURITY (IS_NULL (newPath), {syslog (LOG_ERR, "Bad alloc in function %s\n", __func__);}, );
+
+    strncpy (newPath, buff, bufSize);
+    
+    if (checkFree)
+        free (*path);
+    else
+        checkFree = 1;
+    
+    *path = newPath;
+
+    close (pathFile);
 
 }

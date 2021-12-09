@@ -1,7 +1,11 @@
 #include "copy.h"
 
+#define BUF_SIZE 1000
+
 static  int     CopyDirRec          (DIR* inputDir, const char* output, const char* firstPath);
+
 static  int     CopyRegularFile     (const char* fileName, const char* outputPath);
+static  int     CopyLink            (const char* fileName, const char* outputPath);
 
 /*COMMON FUNCTIONS*/
 static  char*   ConcatTwoStrings    (const char* first, const char* second);
@@ -11,8 +15,8 @@ int CopyDir (const char* dirName, const char* output) {
     DIR* inputDir = opendir (dirName);
     FUNCTION_SECURITY (IS_NULL (inputDir), {perror ("bad opendir");}, -1);
 
-    printf ("new dir %s\n", output);
-    FUNCTION_SECURITY (mkdir (output, 0777) == -1, {perror ("bad mkdir ()");}, -1);
+    FUNCTION_SECURITY (mkdir (output, 0777) == -1, {syslog (LOG_ERR, "bad mkdir ()");}, -1);
+    syslog (LOG_INFO, "%s directory was made", output);
 
     int ret = CopyDirRec (inputDir, output, dirName);
 
@@ -54,7 +58,12 @@ static int CopyDirRec (DIR* inputDir, const char* output, const char* firstPath)
             
             char* newInputPath  = ConcatTwoStrings (firstPath, fileName);
             char* newOutputPath = ConcatTwoStrings (output, fileName);
-            CopyRegularFile (newInputPath, newOutputPath);
+    
+            if (type == DT_LNK)
+                CopyLink (newInputPath, newOutputPath);
+            else
+                CopyRegularFile (newInputPath, newOutputPath);
+    
             free (newInputPath);
             free (newOutputPath);
 
@@ -87,11 +96,9 @@ static int CopyRegularFile (const char* fileName, const char* outputPath) {
     int input = open (fileName, O_RDONLY, 0666);
     FUNCTION_SECURITY (input == -1, {perror ("bad open ()");}, -1);
 
-    printf ("output path = %s\n", outputPath);
     int output = open (outputPath, O_WRONLY | O_CREAT | O_TRUNC, 0666);
     FUNCTION_SECURITY (output == -1, {perror ("bad open ()");}, -1);
 
-    #define BUF_SIZE 10
     char buffer [BUF_SIZE] = {0};
     ssize_t readenBytes = read (input, buffer, BUF_SIZE);
     while (readenBytes > 0) {
@@ -101,6 +108,8 @@ static int CopyRegularFile (const char* fileName, const char* outputPath) {
 
     }
 
+    syslog (LOG_INFO, "file %s was copied as %s", fileName, outputPath);
+
     close (output);
     close (input);
 
@@ -108,3 +117,13 @@ static int CopyRegularFile (const char* fileName, const char* outputPath) {
 
 }
 
+static int CopyLink (const char* fileName, const char* outputPath) {
+
+    char buffer [BUF_SIZE] = {0};
+    ssize_t sourceSize = readlink (fileName, buffer, BUF_SIZE);
+    FUNCTION_SECURITY (symlink (buffer, outputPath) == -1, {syslog (LOG_ERR, "bad symlink ()");}, -1);
+    syslog (LOG_INFO, "link was copied as %s with target %s", outputPath, buffer);
+
+    return 0;
+
+}

@@ -34,10 +34,12 @@ If you want to change copy timeout. Send it using sigqueue.
 * SIGUSR1
 
 Change source dir.
+Write your own path into ```newPath``` and then send SIGUSR1.
 
 * SIGUSR2
 
-Change destination dir.
+Change destination dir. 
+Write your own path into ```newPath``` and then send SIGUSR2.
 
 * SIGQUIT
 

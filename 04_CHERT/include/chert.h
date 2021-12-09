@@ -6,7 +6,7 @@
 
 int     RunTimur            ();
 
-void    RunInterface        (const char* src, const char* dst, const sigset_t signalsSet);
+void    RunInterface        (char* src, char* dst, const sigset_t signalsSet);
 int     SetSignalsSettings  (sigset_t* signalsSet);
 
 #endif

@@ -12,6 +12,7 @@ typedef enum InputErrs {
 } InputErrs;
 
 extern  char* DaemonName;
+extern  char* NewPathFileName;
 
 int     CheckInput      (const int argc, char** argv);
 void    PrintInputErr   (const int err);
@@ -28,7 +29,7 @@ int main (int argc, char** argv) {
     FUNCTION_SECURITY (checkDaemon == -1, {}, -1);
 
     openlog (DaemonName, LOG_PID, LOG_DAEMON);
-    
+
     //Running interface
     sigset_t setSignals = {};
     int checkSignalsSetting = SetSignalsSettings (&setSignals);
