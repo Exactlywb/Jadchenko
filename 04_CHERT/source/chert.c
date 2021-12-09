@@ -1,8 +1,16 @@
 #include "chert.h"
 
-const char* DaemonName = "Timur";
-unsigned int AlarmPer = 10;         //SIGALRM every 10 seconds
-const char* NewPathFileName = "/home/exactlywb/Desktop/Jadchenko/04_CHERT/newPath";
+typedef enum COPY_MODE {
+
+    CLASSIC_COPY_MODE__,
+    INOTIFY_COPY_MODE__
+
+} COPY_MODE;
+
+const               char*       DaemonName      = "Timur";
+        unsigned    int         AlarmPer        = 10;         //SIGALRM every 10 seconds
+const               char*       NewPathFileName = "/home/exactlywb/Desktop/Jadchenko/04_CHERT/newPath";
+                    int         CurrentCopyMode = CLASSIC_COPY_MODE__;
 
 #define BUF_SIZE 1000
 
@@ -56,7 +64,15 @@ void RunInterface (char* src, char* dst, const sigset_t signalsSet) { //!TODO up
 
             case SIGALRM:
                 secondsToWait = alarm (AlarmPer);
-                CopyDir (src, dst);
+                if (CurrentCopyMode == CLASSIC_COPY_MODE__)
+                    CopyDir (src, dst);
+                else if (CurrentCopyMode == INOTIFY_COPY_MODE__)
+                    CopyUsingInotify (src, dst);
+                else {
+                    syslog (LOG_ERR, "Unexpected copy mode");
+                    return;
+                }
+
                 syslog (LOG_INFO, "Copied %s into %s\n", src, dst);
                 break;
             case SIGQUIT:
@@ -69,6 +85,22 @@ void RunInterface (char* src, char* dst, const sigset_t signalsSet) { //!TODO up
             case SIGUSR2:   //change dst
                 ChangePath (&dst);
                 syslog (LOG_INFO, "New dst %s\n", dst);
+                break;
+            case SIGTRAP:   //change to classic mode
+                if (CurrentCopyMode == CLASSIC_COPY_MODE__)
+                    syslog (LOG_INFO, "Current mode is already at classic");
+                else {
+                    CurrentCopyMode = CLASSIC_COPY_MODE__;
+                    syslog (LOG_INFO, "Current copy mode set as classic");
+                }
+                break;
+            case SIGCHLD:
+                if (CurrentCopyMode == INOTIFY_COPY_MODE__)
+                    syslog (LOG_INFO, "Current mode is already at inotify");
+                else {
+                    CurrentCopyMode = INOTIFY_COPY_MODE__;
+                    syslog (LOG_INFO, "Current copy mode set as inotify");
+                }
                 break;
             case SIGINT:
                 AlarmPer = siginfo.si_value.sival_int;
@@ -94,6 +126,8 @@ int SetSignalsSettings (sigset_t* signalsSet) {
     sigaddset (signalsSet, SIGINT);         //change copy timeout
     sigaddset (signalsSet, SIGUSR1);        //change src
     sigaddset (signalsSet, SIGUSR2);        //change dst
+    sigaddset (signalsSet, SIGTRAP);        //change to classic mode
+    sigaddset (signalsSet, SIGCHLD);        //change to inotify mode
 
     FUNCTION_SECURITY (sigprocmask (SIG_BLOCK, signalsSet, NULL), {syslog (LOG_ERR, "bad sigprocmask () in function %s\n", __func__);}, -1);
 

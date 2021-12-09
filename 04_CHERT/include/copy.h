@@ -3,6 +3,7 @@
 
 #include "common.h"
 
-int     CopyDir     (const char* dirName, const char* output);
+int     CopyDir             (const char* dirName, const char* output);
+int     CopyUsingInotify    (const char* dirName, const char* output);
 
 #endif
