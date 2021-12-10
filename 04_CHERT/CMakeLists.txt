@@ -8,7 +8,7 @@ cmake_minimum_required (VERSION 3.8)
 project ("Daemon")
 
 set (EXEC_FILE "daemon")
-set (SOURCES source/main.c source/copy.c source/chert.c)
+set (SOURCES source/main.c source/copy.c source/chert.c source/hashtable.c)
 
 add_executable (${EXEC_FILE} ${SOURCES})
 target_include_directories (${EXEC_FILE} PRIVATE include)

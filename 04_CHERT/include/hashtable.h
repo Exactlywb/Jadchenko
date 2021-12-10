@@ -8,16 +8,20 @@
 
 #include <string.h>
 
-typedef struct TableElem {
+typedef struct TableElem TableElem;
+
+struct TableElem {
 
     unsigned int hash;      //key to get
 
-    char* name;             //file or dir name
+    char*   name;           //file or dir name
+    char*   outputName;     //output path
+    int     wd;             //for inotify watching
 
     TableElem* next;        //
     TableElem* prev;        //here we use chain method
 
-} TableElem;
+};
 
 typedef struct HashTable {
 
@@ -28,8 +32,8 @@ typedef struct HashTable {
 
 HashTable*  HashTableConstructor    (const int size);
 
-void        HashTableAddElem        (HashTable* table, const char* name);
-TableElem*  HashTableGetElem        (const HashTable* table, const char* hash);
+void        HashTableAddElem        (HashTable* table, const char* name, const char* outputPath, const int wd);
+TableElem*  HashTableGetElemByWD    (const HashTable* table, const int wd);
 
 void        HashTableDestructor     (HashTable* table);
 

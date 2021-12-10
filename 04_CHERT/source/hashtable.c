@@ -1,7 +1,7 @@
 #include "hashtable.h"
 
-static  unsigned int    Hash                (HashTable* table, const char* name);
-static  TableElem*      InitTableElem       (HashTable* table, const char* name);
+static  unsigned int    Hash                (const HashTable* table, const int wd);
+static  TableElem*      InitTableElem       (HashTable* table, const char* name, const char* outputPath, const int wd);
 static  void            TableElemDestruct   (TableElem* elem);
 
 HashTable* HashTableConstructor (const int size) {
@@ -20,15 +20,23 @@ HashTable* HashTableConstructor (const int size) {
 
 }
 
-void HashTableAddElem (HashTable* table, const char* name) {
+void HashTableAddElem (HashTable* table, const char* name, const char* outputPath, const int wd) {
 
     FUNCTION_SECURITY (IS_NULL (table), {}, );
 
-
-    TableElem* elem = InitTableElem (table, name);
+    TableElem* elem = InitTableElem (table, name, outputPath, wd);
+    syslog (LOG_INFO, "elem path: %s\n", elem->name);
     FUNCTION_SECURITY (IS_NULL (elem), {}, );
 
     TableElem* curOldElem = table->data [elem->hash];
+
+    if (curOldElem == NULL) {
+
+        table->data [elem->hash] = elem;
+        return;
+
+    }
+
     while (curOldElem->next != NULL)
         curOldElem = curOldElem->next;
 
@@ -37,10 +45,12 @@ void HashTableAddElem (HashTable* table, const char* name) {
 
 }
 
-TableElem* HashTableGetElem (const HashTable* table, const char* name) {
+TableElem* HashTableGetElemByWD (const HashTable* table, const int wd) {
 
     FUNCTION_SECURITY (IS_NULL (table), {}, NULL);
-    return table->data [Hash (table, name)];
+    
+    unsigned int key = Hash (table, wd);
+    return table->data [key]; 
 
 }
 
@@ -78,31 +88,43 @@ static void TableElemDestruct (TableElem* elem) {
 
 }
 
-static TableElem* InitTableElem (HashTable* table, const char* name) {
+static TableElem* InitTableElem (HashTable* table, const char* name, const char* outputPath, const int wd) {
 
     TableElem* elem = (TableElem*)calloc (1, sizeof (*elem));
     FUNCTION_SECURITY (IS_NULL (elem), {}, NULL);
 
-    elem->hash = Hash (table, name);
+    elem->hash = Hash (table, wd);
     
     size_t strLength = strlen (name);
     elem->name = (char*)calloc (strLength + 1, sizeof (char));
     FUNCTION_SECURITY (IS_NULL (elem->name), {free (elem);}, NULL);
     strncpy (elem->name, name, strLength);
 
+    size_t outputLength = strlen (outputPath);
+    elem->outputName = (char*)calloc (outputLength + 1, sizeof (char));
+    FUNCTION_SECURITY (IS_NULL (elem->outputName), {free (elem->outputName); free (elem);}, NULL);
+    strncpy (elem->outputName, outputPath, outputLength);
+
     elem->next = NULL;
     elem->prev = NULL;
+
+    elem->wd = wd;
 
     return elem;
 
 }
 
-static unsigned int Hash (HashTable* table, const char* name) {
+static unsigned int Hash (const HashTable* table, const int wd) {
 
-    unsigned int resHash = 7;
-    for (int i = 0; i < strlen (name); ++i)
-        resHash = resHash * 31 + name [i];
-    
+    unsigned int resHash = 0;
+
+    for (int i = 0; i < 32; ++i) {
+
+        resHash ^= wd;
+        resHash *= 1099511628211;
+
+    }
+
     return resHash % (table->size);
 
 }

@@ -7,11 +7,11 @@ static  int     CopyDirRec          (DIR* inputDir, const char* output, const ch
 static  int     CopyRegularFile     (const char* fileName, const char* outputPath);
 static  int     CopyLink            (const char* fileName, const char* outputPath);
 
-static  int     RunInotify          (const char* dirName);
-static  void    AddWatchesForDir    (const int fd, const char* dirName);
+/*INOTIFY*/
+// static  int     RunInotify          (const char* dirName);
+// static  void    AddWatchesForDir    (const int fd, const char* dirName);
 
 /*COMMON FUNCTIONS*/
-static  char*   ConcatTwoStrings    (const char* first, const char* second);
 static  char*   ConcatStrings       (const int num, ...);
 
 int CopyDir (const char* dirName, const char* output) {
@@ -37,108 +37,25 @@ int CopyDir (const char* dirName, const char* output) {
 
 }
 
-static int CheckModificationsAndCopyThis (const int inotifyFD, const char* dirName, const char* output);
+typedef struct MyInotifyInfo {
 
-int CopyUsingInotify (const char* dirName, const char* output) {
+    int isWorking;
+    int fd;
 
-    static int inotifyFD = -1;
-    if (inotifyFD == -1)
-        inotifyFD = RunInotify (dirName);
+    HashTable* paths;
     
-    FUNCTION_SECURITY (inotifyFD == -1, {syslog (LOG_ERR, "can't run inotify :(");}, -1);
+} MyInotifyInfo;
 
-    CheckModificationsAndCopyThis (inotifyFD, dirName, output);
+static void AddWatchesForDir (MyInotifyInfo* myInotify, const char* dirName, const char* output) {
 
-}
+    FUNCTION_SECURITY (IS_NULL (myInotify)  , {}, );
+    FUNCTION_SECURITY (IS_NULL (dirName)    , {}, );
 
-static int CheckModificationsAndCopyThis (const int inotifyFD, const char* dirName, const char* output) {
+    int wd = inotify_add_watch (myInotify->fd, dirName, IN_CREATE | IN_MODIFY);
+    FUNCTION_SECURITY (wd == -1, {syslog (LOG_ERR, "bad inotify_add_watch (): %s", strerror (errno));}, );
+    syslog (LOG_INFO, "watching for %s\n", dirName);
 
-    #define MAX_EVENTS  1024                                //max event num to handle
-    #define LEN_NAME    100                                 //max file name length
-    #define EVENT_SIZE  (sizeof (struct inotify_event))
-    #define BUF_LEN     (MAX_EVENTS * (EVENT_SIZE + LEN_NAME))
-
-    char buffer [BUF_LEN] = {0};
-
-    fcntl (inotifyFD, F_SETFL, O_NONBLOCK);
-    ssize_t length = read (inotifyFD, buffer, BUF_LEN);
-    FUNCTION_SECURITY (length < 0, {}, 0);
-
-    struct inotify_event* event = NULL;
-    for (ssize_t i = 0; i < length; i += EVENT_SIZE + event->len) {
-
-        event = (struct inotify_event*)&buffer [i];
-
-        if (event->len) {
-
-            if (event->mask & IN_CREATE) {
-
-                if (event->mask & IN_ISDIR) {
-                
-                    syslog (LOG_INFO, "The directory %s was created", event->name);
-                    char* realDirName = ConcatStrings (3, dirName, event->name, "/");
-
-                    AddWatchesForDir (inotifyFD, realDirName);
-
-                    char* realOutputPath = ConcatStrings (3, output, event->name, "/");
-
-                    CopyDir (realDirName, realOutputPath);
-
-                    free (realDirName);
-                    free (realOutputPath);
-
-                    syslog (LOG_INFO, "The directory %s was copied as %s", event->name, output);
-                
-                } else {
-
-                    syslog (LOG_INFO, "The file %s was created", event->name);
-                    CopyDir (dirName, output);
-                    syslog (LOG_INFO, "The file %s was copied", event->name);
-
-                }
-                
-            }
-            if (event->mask & IN_MODIFY) {
-
-                if (event->mask & IN_ISDIR) {
-                
-                    syslog (LOG_INFO, "The directory %s was modified", event->name);
-                    
-                    // char* realDirName = ConcatStrings ();
-
-                    // free (realDirName);
-                
-                } else {
-                 
-                    syslog (LOG_INFO, "The file %s was modified\n", event->name);
-                
-                }
-
-            }
-
-        }
-
-    }
-
-}
-
-static int RunInotify (const char* dirName) {
-
-    int fd = inotify_init1 (0);
-    FUNCTION_SECURITY (fd < 0, {syslog (LOG_ERR, "Bad inotify_init1 ()");}, -1);
-
-    AddWatchesForDir (fd, dirName);
-
-    syslog (LOG_INFO, "watching for %s", dirName);
-
-    return fd;
-
-}
-
-static void AddWatchesForDir (const int fd, const char* dirName) {
-
-    FUNCTION_SECURITY   (inotify_add_watch (fd, dirName, IN_CREATE | IN_MODIFY) == -1,
-                         {syslog (LOG_ERR, "bad inotify_add_watch (): %s", strerror (errno));}, );
+    HashTableAddElem (myInotify->paths, dirName, output, wd);
 
     DIR* dir = opendir (dirName);
     struct dirent* curFile = NULL;
@@ -149,17 +66,121 @@ static void AddWatchesForDir (const int fd, const char* dirName) {
             continue;
         if (STR_EQ (fileName, "..", 2))
             continue;
-        
+
         unsigned char type = curFile->d_type;
         if (type == DT_DIR) {
-        
-            char* newDirName = ConcatStrings (3, dirName, curFile->d_name, "/");
-            AddWatchesForDir (fd, newDirName);
-            free (newDirName);
+
+            char* fullPath = ConcatStrings (3, dirName, curFile->d_name, "/");
+            char* fullOutputPath = ConcatStrings (3, output, curFile->d_name, "/");
+            
+            AddWatchesForDir (myInotify, fullPath, fullOutputPath);
+            
+            free (fullPath);
+            free (fullOutputPath);
 
         }
 
     }
+
+}
+
+static void RunInotify (MyInotifyInfo* myInotify, const char* dirName, const char* output) {
+
+    myInotify->fd = inotify_init1 (0);
+    FUNCTION_SECURITY (myInotify->fd < 0, {syslog (LOG_ERR, "Bad inotify_init1 (): %s", strerror (errno));}, );
+
+    myInotify->paths = HashTableConstructor (10000);
+
+    AddWatchesForDir (myInotify, dirName, output);
+
+    syslog (LOG_INFO, "watching for %s", dirName);
+
+    myInotify->isWorking = 1;
+
+}
+
+static void CheckModificationAndCopyThis (MyInotifyInfo* myInotify, const char* dirName, const char* output) {
+
+    FUNCTION_SECURITY (IS_NULL (myInotify)  , {}, );
+    FUNCTION_SECURITY (IS_NULL (dirName)    , {}, );
+    FUNCTION_SECURITY (IS_NULL (output)     , {}, );
+
+    #define MAX_EVENTS  1024                                //max event num to handle
+    #define LEN_NAME    100                                 //max file name length
+    #define EVENT_SIZE  (sizeof (struct inotify_event))
+    #define BUF_LEN     (MAX_EVENTS * (EVENT_SIZE + LEN_NAME))
+
+    char buffer [BUF_LEN] = {0};
+
+    fcntl (myInotify->fd, F_SETFL, O_NONBLOCK);
+
+    ssize_t length = read (myInotify->fd, buffer, BUF_LEN);
+    FUNCTION_SECURITY (length < 0, {}, );
+
+    struct inotify_event* event = NULL;
+    for (ssize_t i = 0; i < length; i += EVENT_SIZE + event->len) {
+
+        event = (struct inotify_event*)&buffer [i];
+
+        if (event->len) {
+            
+            if (event->mask & IN_CREATE) {
+
+                if (event->mask & IN_ISDIR) {
+
+                    syslog (LOG_INFO, "the directory %s was created", event->name);
+                    
+                    TableElem* parentPath = HashTableGetElemByWD (myInotify->paths, event->wd);
+                    
+                    char* fullPath = ConcatStrings (3, parentPath->name, event->name, "/");
+                    char* fullOutputPath = ConcatStrings (3, parentPath->outputName, event->name, "/");
+                    syslog (LOG_INFO, "Full paths: %s and %s", fullPath, fullOutputPath);
+                    
+                    AddWatchesForDir (myInotify, fullPath, fullOutputPath);
+                    CopyDir (fullPath, fullOutputPath);
+
+                    free (fullPath);
+                    free (fullOutputPath);
+
+                } else {
+
+                    CopyDir (dirName, output);
+                    syslog (LOG_INFO, "the file %s was created", event->name);
+
+                }
+
+            }
+
+            if (event->mask & IN_MODIFY) {
+
+                if (event->mask & IN_ISDIR) {
+
+                    syslog (LOG_INFO, "the directory %s was modified", event->name);
+                    
+                } else {
+                    
+                    CopyDir (dirName, output);
+                    syslog (LOG_INFO, "the file %s was modified", event->name);
+
+                }
+
+            }
+
+        }
+
+    }
+
+}
+
+int CopyUsingInotify (const char* dirName, const char* output) {
+
+    static MyInotifyInfo myInotify = {-1, -1, NULL};
+    if (myInotify.isWorking == -1)
+        RunInotify (&myInotify, dirName, output);
+        
+    FUNCTION_SECURITY (myInotify.isWorking == -1, {syslog (LOG_ERR, "can't run inotify :(");}, -1);
+
+    CheckModificationAndCopyThis (&myInotify, dirName, output);
 
 }
 
@@ -205,22 +226,6 @@ static int CopyDirRec (DIR* inputDir, const char* output, const char* firstPath)
     }
 
     return 0;
-
-}
-
-static char* ConcatTwoStrings (const char* first, const char* second) {
-
-    size_t firstLength  = strlen (first);
-    size_t secondLength = strlen (second);
-    size_t fullLength = firstLength + secondLength;
-
-    char* newString = (char*)calloc (fullLength + 1, sizeof (char));
-    FUNCTION_SECURITY (IS_NULL (newString), {}, NULL);
-
-    strncpy (newString, first, firstLength);
-    strncpy (newString + firstLength, second, secondLength);
-
-    return newString;
 
 }
 

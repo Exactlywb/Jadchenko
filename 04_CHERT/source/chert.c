@@ -8,7 +8,7 @@ typedef enum COPY_MODE {
 } COPY_MODE;
 
 const               char*       DaemonName      = "Timur";
-        unsigned    int         AlarmPer        = 10;         //SIGALRM every 10 seconds
+        unsigned    int         AlarmPer        = 5;         //SIGALRM every 5 seconds
 const               char*       NewPathFileName = "/home/exactlywb/Desktop/Jadchenko/04_CHERT/newPath";
                     int         CurrentCopyMode = CLASSIC_COPY_MODE__;
 
