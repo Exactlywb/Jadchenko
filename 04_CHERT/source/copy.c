@@ -134,8 +134,7 @@ static void CheckModificationAndCopyThis (MyInotifyInfo* myInotify, const char* 
                     
                     char* fullPath = ConcatStrings (3, parentPath->name, event->name, "/");
                     char* fullOutputPath = ConcatStrings (3, parentPath->outputName, event->name, "/");
-                    syslog (LOG_INFO, "Full paths: %s and %s", fullPath, fullOutputPath);
-                    
+
                     AddWatchesForDir (myInotify, fullPath, fullOutputPath);
                     CopyDir (fullPath, fullOutputPath);
 
@@ -143,8 +142,9 @@ static void CheckModificationAndCopyThis (MyInotifyInfo* myInotify, const char* 
                     free (fullOutputPath);
 
                 } else {
-
-                    CopyDir (dirName, output);
+                    
+                    TableElem* parentPath = HashTableGetElemByWD (myInotify->paths, event->wd);
+                    CopyDir (parentPath->name, parentPath->outputName);
                     syslog (LOG_INFO, "the file %s was created", event->name);
 
                 }
@@ -159,7 +159,8 @@ static void CheckModificationAndCopyThis (MyInotifyInfo* myInotify, const char* 
                     
                 } else {
                     
-                    CopyDir (dirName, output);
+                    TableElem* parentPath = HashTableGetElemByWD (myInotify->paths, event->wd);
+                    CopyDir (parentPath->name, parentPath->outputName);
                     syslog (LOG_INFO, "the file %s was modified", event->name);
 
                 }
