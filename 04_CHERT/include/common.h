@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
+#include <ctype.h>
+#include <assert.h>
 
 #include <errno.h>
 
@@ -32,5 +34,11 @@
                                                 } while (0)
 
 #define STR_EQ(str1, str2, len) (!strncmp (str1, str2, len))
+
+#define STR_ERR strerror (errno)
+
+#define BUF_SIZE 1000
+
+char*   ConcatStrings   (const int num, ...);
 
 #endif

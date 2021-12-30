@@ -1,4 +1,5 @@
-#include "chert.h"
+#include "daemon.h"
+#include "copy.h"
 
 typedef enum InputErrs {
 
@@ -11,34 +12,32 @@ typedef enum InputErrs {
 
 } InputErrs;
 
-extern  char* DaemonName;
-extern  char* NewPathFileName;
-
 int     CheckInput      (const int argc, char** argv);
 void    PrintInputErr   (const int err);
 
-//!TODO add checking for existing daemon
-
 int main (int argc, char** argv) {
-    
-    int checkInp = CheckInput (argc, argv);
-    FUNCTION_SECURITY (checkInp != INPUT_OK, {PrintInputErr (checkInp);}, -1);    
 
-    //This is a Timur. Post-modernistic chert (daemon).
-    int checkDaemon = RunTimur ();
+    int checkInput = CheckInput (argc, argv);
+    FUNCTION_SECURITY (checkInput != INPUT_OK, {PrintInputErr (checkInput);}, -1);
+
+    int checkDaemon = RunDaemon ("Timur");
     FUNCTION_SECURITY (checkDaemon == -1, {}, -1);
 
-    openlog (DaemonName, LOG_PID, LOG_DAEMON);
-
-    //Running interface
     sigset_t setSignals = {};
     int checkSignalsSetting = SetSignalsSettings (&setSignals);
-    FUNCTION_SECURITY (checkSignalsSetting == -1, {}, -1);
+    FUNCTION_SECURITY (checkSignalsSetting == -1, {syslog (LOG_ERR, "bad signals settings: %s", STR_ERR);}, -1);
 
-    RunInterface (argv [1], argv [2], setSignals);
+    int srcLength = strlen (argv [1]);
+    char* src = (char*)calloc (srcLength + 1, sizeof (char));
+    FUNCTION_SECURITY (IS_NULL (src), {}, -1);
+    strncpy (src, argv [1], srcLength);
 
-    syslog (LOG_NOTICE, "Timur is dying...");
-    closelog ();
+    int dstLength = strlen (argv [2]);
+    char* dst = (char*)calloc (dstLength + 1, sizeof (char));
+    FUNCTION_SECURITY (IS_NULL (dst), {}, -1);
+    strncpy (dst, argv [2], dstLength);
+
+    RunInterface (src, dst, setSignals);
 
     return 0;
 
@@ -49,8 +48,8 @@ int CheckInput (const int argc, char** argv) {
     FUNCTION_SECURITY (IS_NULL (argv)                                   , {}, NULL_ARGV);
     FUNCTION_SECURITY (argc == 1                                        , {}, NO_INPUT_PATH);
     FUNCTION_SECURITY (argc == 2                                        , {}, NO_OUTPUT_PATH);
-    FUNCTION_SECURITY (argc >  3                                        , {}, TOO_MUCH_ARGS);
-    FUNCTION_SECURITY (STR_EQ (argv [0], argv [1], strlen (argv [0]))   , {}, EQ_DST_SRC);
+    FUNCTION_SECURITY (argc >  3                                        , {}, TOO_MUCH_ARGS);   //!TODO check real path 
+    FUNCTION_SECURITY (STR_EQ (argv [1], argv [2], strlen (argv [1]))   , {}, EQ_DST_SRC);      //!TODO upgrade
 
     return INPUT_OK;
 
